@@ -1,0 +1,95 @@
+import time
+from http.server import BaseHTTPRequestHandler,HTTPServer
+import os
+
+HOST_NAME = 'localhost' # !!!REMEMBER TO CHANGE THIS!!!
+PORT_NUMBER = 8000
+
+
+class MyHandler(BaseHTTPRequestHandler):
+    def do_GET(s):
+        """Respond to a GET request."""
+        s.send_response(200)
+        s.send_header("Content-type", "text/html")
+        s.end_headers()
+        response = (
+            "<html><head><title>System stats</title></head><body>"
+            f"<p>System date & time: {get_system_datetime()}</p>"
+            f"<p>System uptime: {get_system_uptime_seconds()} seconds</p>"
+            f"<p>Processor model & velocity: {get_processor_model_and_velocity()}</p>"
+            f"<p>Percentage of processor in use: {get_percentage_processor_in_use() * 100:.2f}%</p>"
+            f"<p>Total and used RAM: {get_total_and_used_ram()}</p>"
+            f"<p>System version: {get_system_version()}</p>"
+            f"<p>Processes in execution: {', '.join(get_processes_in_execution())}</p>"
+            f"<p>Disk units with capacity: {', '.join(get_disk_units_with_capacity())}</p>"
+            f"<p>USB devices with port: {', '.join(get_usb_devices_with_port())}</p>"
+            f"<p>Network adapters with IP: {', '.join(get_network_adapters_with_ip())}</p>"
+            "</body></html>"
+        )
+        s.wfile.write(response.encode())
+
+
+def get_system_datetime() -> str: # Ricardo
+    #/proc/driver/rtc
+    return ""
+
+def get_system_uptime_seconds() -> str: # Ricardo
+    # /proc/uptime
+   return ""
+
+def get_processor_model_and_velocity() -> str: # Gustavo
+    # /proc/cpuinfo
+    return ""
+
+def get_percentage_processor_in_use() -> float: # Ricardo
+    # /proc/stat
+    return 0.0
+
+def get_total_and_used_ram() -> str: # Gustavo
+    # /proc/meminfo
+    return ""
+
+def get_system_version() -> str: # Ricardo
+    # /proc/version
+    return ""
+
+def get_processes_in_execution() -> list: # Balejos
+    # ler os subdiretorios de /proc e capturar apenas aqueles com valores numricos (expressao regular ^[0-9]+$)
+    sub_dir = []
+    for pid in os.listdir ('/proc'):
+        if pid.isnumeric():
+            sub_dir.append(pid)
+    return sub_dir
+
+def get_disk_units_with_capacity() -> list: # Balejos
+    # /sys/block para listar as unidades de disco
+    # /sys/block/[device]/size para listar o tamanho da unidade de disco em blocos (1 bloco = 512 bytes)
+    disk_units = []
+    if os.path.exists('/sys/block'): 
+        for device in os.listdir('/sys/block'): 
+            size_path = os.path.join ('/sys/block', device, 'size') 
+            if os.path.exists(size_path): 
+                with open (size_path, 'r') as f: 
+                    size_in_blocks = int(f.read().strip()) 
+                    size_in_bytes = size_in_blocks * 512 
+                    disk_units.append (f"{device}: {size_in_bytes / (1024 ** 3):.2f} GB")
+    return disk_units
+
+def get_usb_devices_with_port() -> list: # Gustavo
+    # /sys/bus/usb/devices
+    return []
+
+def get_network_adapters_with_ip() -> list: # Balejos
+    #/proc/net/route
+    with open ('/proc/net/route', 'r') as file:	content = file.readlines()
+    return content
+
+if __name__ == '__main__':
+    httpd = HTTPServer((HOST_NAME, PORT_NUMBER), MyHandler)
+    print("Server Starts - %s:%s" % (HOST_NAME, PORT_NUMBER))
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    httpd.server_close()
+    print("Server Stops - %s:%s" % (HOST_NAME, PORT_NUMBER))

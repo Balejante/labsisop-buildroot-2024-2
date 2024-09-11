@@ -1186,7 +1186,7 @@ configure:7815: $? = 0
 configure:7815: result: yes
 configure:7821: checking for _doprnt
 configure:7821: gcc -o conftest  -O2    conftest.c -lrt  >&5
-/usr/bin/ld: /tmp/cczdFuqr.o: in function `main':
+/usr/bin/ld: /tmp/cchCgAes.o: in function `main':
 conftest.c:(.text.startup+0xb): undefined reference to `_doprnt'
 collect2: error: ld returned 1 exit status
 configure:7821: $? = 1
