@@ -1,6 +1,7 @@
 import time
 from http.server import BaseHTTPRequestHandler,HTTPServer
 import os
+import re
 
 HOST_NAME = 'localhost' # !!!REMEMBER TO CHANGE THIS!!!
 PORT_NUMBER = 8000
@@ -31,27 +32,93 @@ class MyHandler(BaseHTTPRequestHandler):
 
 def get_system_datetime() -> str: # Ricardo
     #/proc/driver/rtc
-    return ""
+    with open("/proc/driver/rtc", 'r') as f:
+        content = f.read()
+    rtc_time = re.search(r'rtc_time\s*:\s*(\d+:\d+:\d+)', content).group(1)
+    rtc_date = re.search(r'rtc_date\s*:\s*(\d+-\d+-\d+)', content).group(1)
+    return f"{rtc_date}, {rtc_time}"
 
 def get_system_uptime_seconds() -> str: # Ricardo
     # /proc/uptime
-   return ""
+   with open("/proc/uptime", 'r') as f:
+        content = f.read()
+    uptime = re.split(r'\s+', content)[0]
+    return f"{uptime}"
 
 def get_processor_model_and_velocity() -> str: # Gustavo
-    # /proc/cpuinfo
-    return ""
+    cpu_info={}
+    try:
+        with open('/proc/cpuinfo', 'r') as f:
+            for line in f:
+                if line.startswith('model name'):
+                    #pega o modelo separa depois do :
+                    key, value = line.strip().split(':', 1)
+                    cpu_info['model'] = value.strip()
+                elif line.startswith('cpu MHz'):
+                    #pega a velocidade separa depois do :
+                    key, value = line.strip().split(':', 1)
+                    cpu_info['speed'] = value.strip()
+    except FileNotFoundError:
+        print("/proc/cpuinfo not found.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    return f"{cpu_info['model']} || {cpu_info['speed']} MHz"
 
 def get_percentage_processor_in_use() -> float: # Ricardo
     # /proc/stat
-    return 0.0
+    with open("/proc/stat") as f:
+        content1 = f.read()
+    time.sleep(1)
+    with open("/proc/stat") as f:
+        content2 = f.read()
+    
+    # process first snapshot
+    lines1 = content1.split("\n")
+    first_line_split1 = lines1[0].split()[1:]
+    total1 = sum(map(float, first_line_split1))
+    idle1 = float(first_line_split1[3])
+
+    # process second snapshot
+    lines2 = content2.split("\n")
+    first_line_split2 = lines2[0].split()[1:]
+    total2 = sum(map(float, first_line_split2))
+    idle2 = float(first_line_split2[3])
+
+    #calculate CPU usage percentage
+    total_diff = total2 - total1
+    idle_diff = idle2 - idle1
+    return 100 * (1 - (idle_diff/total_diff))
 
 def get_total_and_used_ram() -> str: # Gustavo
-    # /proc/meminfo
-    return ""
+    mem_info = {}
+    
+    try:
+        with open('/proc/meminfo', 'r') as f:
+            for line in f:
+                if line.startswith('MemTotal'):
+                    key, value = line.strip().split(':', 1)
+                    mem_info['MemTotal'] = int(value.strip().split()[0])
+                    #memAvailable pois indica a quantidade livre, levando em conta a memoria em caching e buffering que pode ser liberado 
+                elif line.startswith('MemAvailable'):
+                    key, value = line.strip().split(':', 1)
+                    mem_info['MemAvailable'] = int(value.strip().split()[0])
+    except FileNotFoundError:
+        return "/proc/meminfo not found."
+    except Exception as e:
+        return f"An error occurred: {e}"
+
+    if 'MemTotal' in mem_info and 'MemAvailable' in mem_info:
+        used_memory = mem_info['MemTotal'] - mem_info['MemAvailable']
+        used_memory= used_memory/1_048_576
+        total_mem=mem_info['MemTotal']/1_048_576
+        return f"{total_mem:.2f} gB || {used_memory:.2f} gB"
+    else:
+        return "Memory information is incomplete."
 
 def get_system_version() -> str: # Ricardo
-    # /proc/version
-    return ""
+    with open("/proc/version") as f:
+        content = f.read()
+    return content
 
 def get_processes_in_execution() -> list: # Balejos
     # ler os subdiretorios de /proc e capturar apenas aqueles com valores numricos (expressao regular ^[0-9]+$)
@@ -77,7 +144,20 @@ def get_disk_units_with_capacity() -> list: # Balejos
 
 def get_usb_devices_with_port() -> list: # Gustavo
     # /sys/bus/usb/devices
-    return []
+    usb_path = '/sys/bus/usb/devices'
+    
+    try:
+
+        usb_entries = os.listdir(usb_path)
+        
+        #filtra os diretorios
+        dir = [entry for entry in usb_entries if os.path.isdir(os.path.join(usb_path, entry))]
+        
+        return dir
+    except FileNotFoundError:
+        return ["/sys/bus/usb/devices  not found."]
+    except Exception as e:
+        return [f"An error occurred: {e}"]
 
 def get_network_adapters_with_ip() -> list: # Balejos
     #/proc/net/route
