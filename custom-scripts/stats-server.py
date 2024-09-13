@@ -41,9 +41,9 @@ def get_system_datetime() -> str: # Ricardo
 def get_system_uptime_seconds() -> str: # Ricardo
     # /proc/uptime
    with open("/proc/uptime", 'r') as f:
-        content = f.read()
-    uptime = re.split(r'\s+', content)[0]
-    return f"{uptime}"
+    content = f.read()
+   uptime = re.split(r'\s+', content)[0]
+   return f"{uptime}"
 
 def get_processor_model_and_velocity() -> str: # Gustavo
     cpu_info={}
